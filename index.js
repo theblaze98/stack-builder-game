@@ -1,6 +1,8 @@
 const canvas = document.querySelector('#canvas')
 const ctx = canvas.getContext('2d')
 const score = document.querySelector('#score')
+const audio = document.querySelector('#audio')
+
 
 const STATES = {
 	START: 0,
@@ -12,11 +14,20 @@ const INITIAL_BOX_WIDTH = 200
 const BOX_HEIGHT = 30
 const INITIAL_BOX_Y = 600
 
-const INITIAL_Y_SPEED = 5
-const INITIAL_X_SPEED = 2
+const INITIAL_Y_SPEED = 10
+const INITIAL_X_SPEED = 1
 
 let boxes = []
+let debris = { x: 0, y: 0, width: 0 }
 let scrollCounter, cameraY, current, mode, xSpeed, ySpeed
+
+function randomColor() {
+	const red = Math.floor(Math.random() * 255)
+	const green = Math.floor(Math.random() * 255)
+	const blue = Math.floor(Math.random() * 255)
+
+	return `rgb(${red}, ${green}, ${blue})`
+}
 
 function initializedGameState() {
 	boxes = [
@@ -50,6 +61,7 @@ function draw() {
 
 	drawBackground()
 	drawBoxes()
+	drawDebris()
 
 	if (mode === STATES.START) {
 		moveAndCollision()
@@ -57,6 +69,7 @@ function draw() {
 		updatePlayingMode()
 	}
 
+	debris.y -= ySpeed
 	updateCamera()
 
 	window.requestAnimationFrame(draw)
@@ -80,9 +93,9 @@ function drawBoxes() {
 function createNewBox() {
 	boxes[current] = {
 		x: 0,
-		y: (current + 10) * 50,
+		y: (current + 18) * BOX_HEIGHT,
 		width: boxes[current - 1].width,
-		color: 'blue',
+		color: randomColor(),
 	}
 }
 
@@ -104,18 +117,18 @@ function moveAndCollision() {
 
 function updatePlayingMode() {
 	boxes[current].y -= ySpeed
-	const lastBox = boxes[current - 1]
+	const previousBox = boxes[current - 1]
 
-	if (boxes[current].y === lastBox.y + BOX_HEIGHT) {
+	if (boxes[current].y === previousBox.y + BOX_HEIGHT) {
 		handleBoxLanding()
 	}
 }
 
 function handleBoxLanding() {
 	const currentBox = boxes[current]
-	const lastBox = boxes[current - 1]
+	const previousBox = boxes[current - 1]
 
-	const diff = currentBox.x - lastBox.x
+	const diff = currentBox.x - previousBox.x
 
 	if (Math.abs(diff) >= currentBox.width) {
 		drawGameOver()
@@ -125,11 +138,13 @@ function handleBoxLanding() {
 	if (diff > 0) {
 		currentBox.width -= diff
 	} else {
-		currentBox.x = lastBox.x
+		currentBox.x = previousBox.x
 		currentBox.width += diff
 	}
 
-	xSpeed += xSpeed > 0 ? 1 : -1
+	createNewDebris(diff)
+
+	xSpeed += xSpeed > 0 ? 0.25 : -0.25
 	current++
 	scrollCounter = BOX_HEIGHT
 	mode = STATES.START
@@ -138,6 +153,29 @@ function handleBoxLanding() {
 
 	createNewBox()
 }
+
+function createNewDebris(diff) {
+	const currentBox = boxes[current]
+	const previousBox = boxes[current - 1]
+
+	const debrisX =
+		currentBox.x > previousBox.x
+			? currentBox.x + currentBox.width
+			: currentBox.x
+
+	debris = {
+		x: debrisX,
+		y: currentBox.y,
+		width: diff,
+	}
+}
+
+function drawDebris() {
+	const newY = INITIAL_BOX_Y - debris.y + cameraY
+	ctx.fillStyle = 'red'
+	ctx.fillRect(debris.x, newY, debris.width, BOX_HEIGHT)
+}
+
 
 function drawGameOver() {
 	mode = STATES.GAMEOVER
@@ -163,7 +201,7 @@ canvas.onpointerdown = e => {
 		mode = STATES.PLAYING
 		return
 	}
-	if(mode === STATES.GAMEOVER) {
+	if (mode === STATES.GAMEOVER) {
 		restart()
 		return
 	}
