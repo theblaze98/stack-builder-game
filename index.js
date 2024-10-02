@@ -1,8 +1,6 @@
 const canvas = document.querySelector('#canvas')
 const ctx = canvas.getContext('2d')
 const score = document.querySelector('#score')
-const audio = document.querySelector('#audio')
-
 
 const STATES = {
 	START: 0,
